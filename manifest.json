@@ -1,0 +1,22 @@
+{
+    "manifest_version": 3,
+    "name": "YouTube Transcript Summarizer",
+    "version": "1.0",
+    "permissions": ["activeTab", "scripting"],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "popup.html",
+      "default_icon": {
+        "128": "images/icon.png"
+      }
+    },
+    "content_scripts": [
+      {
+        "matches": ["https://www.youtube.com/*"],
+        "js": ["contentScript.js"]
+      }
+    ]
+  }
+  
