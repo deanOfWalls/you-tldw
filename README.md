@@ -46,8 +46,8 @@ Once installed, the extension adds two buttons next to the "Subscribe" button on
 
 ## Screenshots
 
-![YouTLDW Button](path_to_screenshot_1)
-![Settings Modal](path_to_screenshot_2)
+![YouTLDW Button](/images/buttons.png)
+![Settings Modal](/images/modal.png)
 
 
 ## Disclaimer
