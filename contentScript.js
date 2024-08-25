@@ -164,7 +164,7 @@ async function addOverlayButtons() {
             });
 
             // Settings button with gear icon
-            settingsButton.innerText = '⚙️';
+            settingsButton.innerText = '✏️';
             settingsButton.style.fontSize = '18px'; // Adjust size as needed
             settingsButton.style.marginLeft = '10px';
             settingsButton.style.backgroundColor = '#ffffff'; // White background to match the YouTLDW button
