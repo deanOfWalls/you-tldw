@@ -34,7 +34,7 @@ async function openTranscript() {
             } catch (error) {
                 console.error(error);
             }
-        }, 1000); // Adjust this delay if needed
+        }, 200); // Adjust this delay if needed
     } catch (error) {
         console.error(error);
     }
@@ -47,7 +47,7 @@ function getTranscript() {
     if (transcriptContainer) {
         console.log('Transcript container found');
         let transcriptText = '';
-        const segments = transcriptContainer.querySelectorAll('.cue');
+        const segments = transcriptContainer.querySelectorAll('ytd-transcript-segment-list-renderer .segment');
         if (segments.length > 0) {
             segments.forEach(segment => {
                 transcriptText += segment.innerText + ' ';
@@ -67,17 +67,65 @@ function getTranscript() {
 function handleTranscript() {
     console.log("handleTranscript function started.");
     openTranscript();
+    
+    // Adjust the delay here to ensure the transcript is fully loaded before we proceed
     setTimeout(() => {
         const transcript = getTranscript();
         if (transcript) {
             console.log("Transcript:", transcript);
             // Open a new tab and send the transcript to ChatGPT or another service
-            chrome.runtime.sendMessage({ transcript: transcript, instructions: "Please summarize this transcript." });
+            chrome.runtime.sendMessage({ transcript: transcript, instructions: "Summarize in bullet point: " });
         } else {
             console.error('Transcript retrieval failed.');
         }
-    }, 5000); // Wait a bit longer for the transcript to load
+    }, 1000); // Increased delay to ensure transcript is loaded
 }
 
-// Start the process
-handleTranscript();
+// Add the overlay button to the right of the subscribe button
+async function addOverlayButton() {
+    try {
+        const subscribeButton = await waitForElement('#subscribe-button-shape > button');
+        if (subscribeButton) {
+            const overlayButton = document.createElement('button');
+
+            // Create a span element for the text styling
+            const spanYou = document.createElement('span');
+            spanYou.innerText = 'You';
+            spanYou.style.color = '#000000'; // Black color for 'You'
+
+            const spanTLDW = document.createElement('span');
+            spanTLDW.innerText = 'TLDW';
+            spanTLDW.style.color = '#ff0000'; // Red color for 'TLDW'
+
+            overlayButton.appendChild(spanYou);
+            overlayButton.appendChild(spanTLDW);
+
+            // Match font style, size, and weight to Subscribe button
+            overlayButton.style.fontFamily = subscribeButton.style.fontFamily || 'Roboto, Arial, sans-serif';
+            overlayButton.style.fontSize = subscribeButton.style.fontSize || '14px';
+            overlayButton.style.fontWeight = subscribeButton.style.fontWeight || '500';
+            overlayButton.style.padding = '5px 10px';
+            overlayButton.style.backgroundColor = '#ffffff'; // White background to match the Subscribe button
+            overlayButton.style.border = '1px solid #cccccc'; // Match border style
+            overlayButton.style.borderRadius = '4px';
+            overlayButton.style.cursor = 'pointer';
+            overlayButton.style.marginLeft = '10px';
+
+            overlayButton.addEventListener('click', () => {
+                console.log('Overlay button clicked');
+                handleTranscript();
+            });
+
+            // Insert the button to the right of the subscribe button
+            subscribeButton.parentNode.insertBefore(overlayButton, subscribeButton.nextSibling);
+            console.log('Overlay button added to the right of the subscribe button');
+        } else {
+            console.error('Subscribe button not found, cannot add overlay button.');
+        }
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+// Start the process by adding the overlay button
+addOverlayButton();
