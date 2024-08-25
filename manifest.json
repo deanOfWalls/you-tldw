@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Transcript Summarizer",
+  "name": "YouTLDW",
   "version": "1.0",
   "permissions": [
     "activeTab",
@@ -20,5 +20,13 @@
       "matches": ["https://www.youtube.com/*"],
       "js": ["contentScript.js"]
     }
-  ]
+  ],
+  "icons": {
+    "128": "images/icon.png"  // Specify the path to your 128x128 icon here
+  },
+  "action": {
+    "default_icon": {
+      "128": "images/icon.png"
+    }
+  }
 }
