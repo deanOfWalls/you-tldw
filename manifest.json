@@ -22,7 +22,7 @@
     }
   ],
   "icons": {
-    "128": "images/icon.png"  // Specify the path to your 128x128 icon here
+    "128": "images/icon.png"
   },
   "action": {
     "default_icon": {
