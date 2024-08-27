@@ -1,5 +1,5 @@
 // Utility function to wait for an element to appear
-function waitForElement(selector, timeout = 5000) {
+function waitForElement(selector, timeout = 10000) {  // Increased timeout to 10 seconds
     return new Promise((resolve, reject) => {
         const start = Date.now();
 
@@ -10,7 +10,7 @@ function waitForElement(selector, timeout = 5000) {
             } else if (Date.now() - start > timeout) {
                 reject(`Timeout: Element with selector ${selector} not found`);
             } else {
-                setTimeout(check, 100);
+                setTimeout(check, 200); // Increased check interval to reduce resource usage
             }
         })();
     });
@@ -69,7 +69,7 @@ function handleTranscript(customInstructions = "Summarize in bullet point: ") {
         } else {
             showNotFoundModal(); // Show a modal if the transcript is not found
         }
-    }, 1000); // Increased delay to ensure transcript is loaded
+    }, 1500); // Slightly increased delay to ensure transcript is loaded
 }
 
 // Function to extract the transcript text
@@ -182,9 +182,9 @@ function showCustomPromptModal() {
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'Enter your custom prompt';
-    input.style.width = 'calc(100% - 40px)'; // Add padding to the input box
+    input.style.width = 'calc(100% - 20px)'; // Add padding to the input box
     input.style.padding = '10px';
-    input.style.margin = '0 10px 10px 10px'; // Add margin to prevent the input from touching the edges
+    input.style.marginBottom = '20px'; // Add margin at the bottom to separate it from the OK button
     input.style.border = '1px solid #cccccc';
     input.style.borderRadius = '4px';
     input.style.backgroundColor = '#ffffff'; // Keep the input box background white
@@ -228,7 +228,7 @@ function showCustomPromptModal() {
     // Append the close button to the header
     header.appendChild(closeButton);
 
-    // Append the input and OK button to the modal
+    // Append the input, OK button, and other elements to the modal
     modal.appendChild(header);
     modal.appendChild(input);
     buttonContainer.appendChild(okButton); // Add the OK button to the container
