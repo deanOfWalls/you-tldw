@@ -16,28 +16,60 @@ function waitForElement(selector, timeout = 5000) {
     });
 }
 
-// Function to open the "More" section and then the transcript
-async function openTranscript() {
-    console.log("openTranscript function started.");
+// Function to check if the transcript button is available
+async function isTranscriptAvailable() {
+    console.log("Checking if transcript button is available...");
 
     try {
-        const moreButton = await waitForElement('#expand');
-        console.log('"More" button found and clicked');
-        moreButton.click();
+        const transcriptButton = await waitForElement('#primary-button > ytd-button-renderer > yt-button-shape > button > yt-touch-feedback-shape > div > div.yt-spec-touch-feedback-shape__fill', 2000);
+        return !!transcriptButton; // If the button is found, transcript is available
+    } catch (error) {
+        console.log("Transcript button not found.");
+        return false; // No transcript button found, so no transcript available
+    }
+}
 
-        // Wait for a short time to allow the transcript button to appear
-        setTimeout(async () => {
-            try {
-                const transcriptButton = await waitForElement('#primary-button > ytd-button-renderer > yt-button-shape > button > yt-touch-feedback-shape > div > div.yt-spec-touch-feedback-shape__fill');
+// Function to open the transcript when YouTLDW or Pencil button is clicked
+async function openTranscriptOnDemand() {
+    try {
+        const moreButton = await waitForElement('#expand', 2000);
+        if (moreButton) {
+            console.log('"More" button found and clicked');
+            moreButton.click();
+
+            const transcriptButton = await waitForElement('#primary-button > ytd-button-renderer > yt-button-shape > button > yt-touch-feedback-shape > div > div.yt-spec-touch-feedback-shape__fill', 2000);
+            if (transcriptButton) {
                 console.log('Transcript button found and clicked');
                 transcriptButton.click();
-            } catch (error) {
-                console.error(error);
+            } else {
+                console.error('Transcript button not found after clicking "More"');
             }
-        }, 200); // Adjust this delay if needed
+        } else {
+            console.error('"More" button not found');
+        }
     } catch (error) {
-        console.error(error);
+        console.error('Error in openTranscriptOnDemand:', error);
     }
+}
+
+// Function to handle the transcript actions
+function handleTranscript(customInstructions = "Summarize in bullet point: ") {
+    console.log("handleTranscript function started.");
+    openTranscriptOnDemand();
+
+    // Adjust the delay here to ensure the transcript is fully loaded before we proceed
+    setTimeout(() => {
+        const transcript = getTranscript();
+        if (transcript) {
+            console.log("Transcript:", transcript);
+            // Wrap the transcript in a code block
+            const wrappedTranscript = `\`\`\`\n${transcript}\n\`\`\``;
+            // Send the transcript with the custom instructions
+            chrome.runtime.sendMessage({ transcript: wrappedTranscript, instructions: customInstructions });
+        } else {
+            showNotFoundModal(); // Show a modal if the transcript is not found
+        }
+    }, 1000); // Increased delay to ensure transcript is loaded
 }
 
 // Function to extract the transcript text
@@ -59,26 +91,6 @@ function getTranscript() {
     } else {
         return null; // No transcript container found, return null
     }
-}
-
-// Function to handle getting the transcript with custom instructions
-function handleTranscript(customInstructions = "Summarize in bullet point: ") {
-    console.log("handleTranscript function started.");
-    openTranscript();
-    
-    // Adjust the delay here to ensure the transcript is fully loaded before we proceed
-    setTimeout(() => {
-        const transcript = getTranscript();
-        if (transcript) {
-            console.log("Transcript:", transcript);
-            // Wrap the transcript in a code block
-            const wrappedTranscript = `\`\`\`\n${transcript}\n\`\`\``;
-            // Open a new tab and send the transcript with the custom instructions
-            chrome.runtime.sendMessage({ transcript: wrappedTranscript, instructions: customInstructions });
-        } else {
-            showNotFoundModal(); // Show a modal if the transcript is not found
-        }
-    }, 1000); // Increased delay to ensure transcript is loaded
 }
 
 // Function to show a modal explaining no transcript was found
@@ -226,63 +238,89 @@ function showCustomPromptModal() {
     document.body.appendChild(modal);
 }
 
-// Add the overlay buttons or "Not Found" button to the right of the subscribe button
+// Function to add the overlay buttons based on transcript availability
 async function addOverlayButtons() {
     try {
         const subscribeButton = await waitForElement('#subscribe-button-shape > button');
-        
+
         if (subscribeButton) {
-            // Create the overlay button
-            const overlayButton = document.createElement('button');
-            const settingsButton = document.createElement('button');
+            // Check if the transcript is available by checking for the presence of the transcript button
+            const transcriptAvailable = await isTranscriptAvailable();
 
-            // Create spans for YouTLDW button text styling
-            const spanYou = document.createElement('span');
-            spanYou.innerText = 'You';
-            spanYou.style.color = '#000000'; // Black color for 'You'
+            if (transcriptAvailable) {
+                const overlayButton = document.createElement('button');
+                const settingsButton = document.createElement('button');
 
-            const spanTLDW = document.createElement('span');
-            spanTLDW.innerText = 'TLDW';
-            spanTLDW.style.color = '#ff0000'; // Red color for 'TLDW'
+                // Create spans for YouTLDW button text styling
+                const spanYou = document.createElement('span');
+                spanYou.innerText = 'You';
+                spanYou.style.color = '#000000'; // Black color for 'You'
 
-            overlayButton.appendChild(spanYou);
-            overlayButton.appendChild(spanTLDW);
+                const spanTLDW = document.createElement('span');
+                spanTLDW.innerText = 'TLDW';
+                spanTLDW.style.color = '#ff0000'; // Red color for 'TLDW'
 
-            // Match font style, size, and weight to Subscribe button
-            overlayButton.style.fontFamily = subscribeButton.style.fontFamily || 'Roboto, Arial, sans-serif';
-            overlayButton.style.fontSize = subscribeButton.style.fontSize || '14px';
-            overlayButton.style.fontWeight = subscribeButton.style.fontWeight || '500';
-            overlayButton.style.padding = '5px 10px';
-            overlayButton.style.backgroundColor = '#ffffff'; // White background to match the Subscribe button
-            overlayButton.style.border = '1px solid #cccccc'; // Match border style
-            overlayButton.style.borderRadius = '4px';
-            overlayButton.style.cursor = 'pointer';
-            overlayButton.style.marginLeft = '10px';
+                overlayButton.appendChild(spanYou);
+                overlayButton.appendChild(spanTLDW);
 
-            overlayButton.addEventListener('click', () => {
-                console.log('Overlay button clicked');
-                handleTranscript(); // Call the function to start transcript extraction when clicked
-            });
+                // Match font style, size, and weight to Subscribe button
+                overlayButton.style.fontFamily = subscribeButton.style.fontFamily || 'Roboto, Arial, sans-serif';
+                overlayButton.style.fontSize = subscribeButton.style.fontSize || '14px';
+                overlayButton.style.fontWeight = subscribeButton.style.fontWeight || '500';
+                overlayButton.style.padding = '5px 10px';
+                overlayButton.style.backgroundColor = '#ffffff'; // White background to match the Subscribe button
+                overlayButton.style.border = '1px solid #cccccc'; // Match border style
+                overlayButton.style.borderRadius = '4px';
+                overlayButton.style.cursor = 'pointer';
+                overlayButton.style.marginLeft = '10px';
 
-            // Settings button with pencil icon
-            settingsButton.innerText = '✏️';
-            settingsButton.style.fontSize = '18px'; // Adjust size as needed
-            settingsButton.style.marginLeft = '10px';
-            settingsButton.style.backgroundColor = '#ffffff'; // White background to match the YouTLDW button
-            settingsButton.style.border = '1px solid #cccccc'; // Match border style
-            settingsButton.style.borderRadius = '4px';
-            settingsButton.style.cursor = 'pointer';
-            settingsButton.style.padding = '5px 10px';
+                overlayButton.addEventListener('click', () => {
+                    console.log('Overlay button clicked');
+                    handleTranscript(); // Call the function to start transcript extraction when clicked
+                });
 
-            settingsButton.addEventListener('click', () => {
-                console.log('Settings button clicked');
-                showCustomPromptModal(); // Show the custom prompt modal when clicked
-            });
+                // Settings button with pencil icon
+                settingsButton.innerText = '✏️';
+                settingsButton.style.fontSize = '18px'; // Adjust size as needed
+                settingsButton.style.marginLeft = '10px';
+                settingsButton.style.backgroundColor = '#ffffff'; // White background to match the YouTLDW button
+                settingsButton.style.border = '1px solid #cccccc'; // Match border style
+                settingsButton.style.borderRadius = '4px';
+                settingsButton.style.cursor = 'pointer';
+                settingsButton.style.padding = '5px 10px';
 
-            // Insert the buttons to the right of the subscribe button
-            subscribeButton.parentNode.insertBefore(overlayButton, subscribeButton.nextSibling);
-            subscribeButton.parentNode.insertBefore(settingsButton, overlayButton.nextSibling);
-            console.log('Overlay and settings buttons added to the right of the subscribe button');
+                settingsButton.addEventListener('click', () => {
+                    console.log('Settings button clicked');
+                    showCustomPromptModal(); // Show the custom prompt modal when clicked
+                });
+
+                // Insert the buttons to the right of the subscribe button
+                subscribeButton.parentNode.insertBefore(overlayButton, subscribeButton.nextSibling);
+                subscribeButton.parentNode.insertBefore(settingsButton, overlayButton.nextSibling);
+                console.log('Overlay and settings buttons added to the right of the subscribe button');
+            } else {
+                const notFoundButton = document.createElement('button');
+                notFoundButton.innerText = 'Not Found';
+                notFoundButton.style.fontFamily = subscribeButton.style.fontFamily || 'Roboto, Arial, sans-serif';
+                notFoundButton.style.fontSize = '14px';
+                notFoundButton.style.fontWeight = '500';
+                notFoundButton.style.padding = '5px 10px';
+                notFoundButton.style.backgroundColor = '#ff0000'; // Red background to indicate an issue
+                notFoundButton.style.color = '#ffffff';
+                notFoundButton.style.border = '1px solid #cccccc';
+                notFoundButton.style.borderRadius = '4px';
+                notFoundButton.style.cursor = 'pointer';
+                notFoundButton.style.marginLeft = '10px';
+
+                notFoundButton.addEventListener('click', () => {
+                    console.log('Not Found button clicked');
+                    showNotFoundModal();
+                });
+
+                // Insert the Not Found button to the right of the subscribe button
+                subscribeButton.parentNode.insertBefore(notFoundButton, subscribeButton.nextSibling);
+                console.log('Not Found button added to the right of the subscribe button');
+            }
         } else {
             console.error('Subscribe button not found, cannot add overlay button.');
         }
