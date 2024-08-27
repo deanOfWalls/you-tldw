@@ -54,12 +54,10 @@ function getTranscript() {
             });
             return transcriptText.trim();
         } else {
-            console.error('No transcript segments found.');
-            return null;
+            return null; // No segments found, return null
         }
     } else {
-        console.error('Transcript container not found');
-        return null;
+        return null; // No transcript container found, return null
     }
 }
 
@@ -78,7 +76,6 @@ function handleTranscript(customInstructions = "Summarize in bullet point: ") {
             // Open a new tab and send the transcript with the custom instructions
             chrome.runtime.sendMessage({ transcript: wrappedTranscript, instructions: customInstructions });
         } else {
-            console.error('Transcript retrieval failed.');
             showNotFoundModal(); // Show a modal if the transcript is not found
         }
     }, 1000); // Increased delay to ensure transcript is loaded
@@ -235,86 +232,57 @@ async function addOverlayButtons() {
         const subscribeButton = await waitForElement('#subscribe-button-shape > button');
         
         if (subscribeButton) {
-            openTranscript();
+            // Create the overlay button
+            const overlayButton = document.createElement('button');
+            const settingsButton = document.createElement('button');
 
-            // Adjust the delay to ensure transcript is checked properly
-            setTimeout(() => {
-                const transcript = getTranscript(); // Check if the transcript is available
-                if (transcript) {
-                    const overlayButton = document.createElement('button');
-                    const settingsButton = document.createElement('button');
+            // Create spans for YouTLDW button text styling
+            const spanYou = document.createElement('span');
+            spanYou.innerText = 'You';
+            spanYou.style.color = '#000000'; // Black color for 'You'
 
-                    // Create spans for YouTLDW button text styling
-                    const spanYou = document.createElement('span');
-                    spanYou.innerText = 'You';
-                    spanYou.style.color = '#000000'; // Black color for 'You'
+            const spanTLDW = document.createElement('span');
+            spanTLDW.innerText = 'TLDW';
+            spanTLDW.style.color = '#ff0000'; // Red color for 'TLDW'
 
-                    const spanTLDW = document.createElement('span');
-                    spanTLDW.innerText = 'TLDW';
-                    spanTLDW.style.color = '#ff0000'; // Red color for 'TLDW'
+            overlayButton.appendChild(spanYou);
+            overlayButton.appendChild(spanTLDW);
 
-                    overlayButton.appendChild(spanYou);
-                    overlayButton.appendChild(spanTLDW);
+            // Match font style, size, and weight to Subscribe button
+            overlayButton.style.fontFamily = subscribeButton.style.fontFamily || 'Roboto, Arial, sans-serif';
+            overlayButton.style.fontSize = subscribeButton.style.fontSize || '14px';
+            overlayButton.style.fontWeight = subscribeButton.style.fontWeight || '500';
+            overlayButton.style.padding = '5px 10px';
+            overlayButton.style.backgroundColor = '#ffffff'; // White background to match the Subscribe button
+            overlayButton.style.border = '1px solid #cccccc'; // Match border style
+            overlayButton.style.borderRadius = '4px';
+            overlayButton.style.cursor = 'pointer';
+            overlayButton.style.marginLeft = '10px';
 
-                    // Match font style, size, and weight to Subscribe button
-                    overlayButton.style.fontFamily = subscribeButton.style.fontFamily || 'Roboto, Arial, sans-serif';
-                    overlayButton.style.fontSize = subscribeButton.style.fontSize || '14px';
-                    overlayButton.style.fontWeight = subscribeButton.style.fontWeight || '500';
-                    overlayButton.style.padding = '5px 10px';
-                    overlayButton.style.backgroundColor = '#ffffff'; // White background to match the Subscribe button
-                    overlayButton.style.border = '1px solid #cccccc'; // Match border style
-                    overlayButton.style.borderRadius = '4px';
-                    overlayButton.style.cursor = 'pointer';
-                    overlayButton.style.marginLeft = '10px';
+            overlayButton.addEventListener('click', () => {
+                console.log('Overlay button clicked');
+                handleTranscript(); // Call the function to start transcript extraction when clicked
+            });
 
-                    overlayButton.addEventListener('click', () => {
-                        console.log('Overlay button clicked');
-                        handleTranscript();
-                    });
+            // Settings button with pencil icon
+            settingsButton.innerText = '✏️';
+            settingsButton.style.fontSize = '18px'; // Adjust size as needed
+            settingsButton.style.marginLeft = '10px';
+            settingsButton.style.backgroundColor = '#ffffff'; // White background to match the YouTLDW button
+            settingsButton.style.border = '1px solid #cccccc'; // Match border style
+            settingsButton.style.borderRadius = '4px';
+            settingsButton.style.cursor = 'pointer';
+            settingsButton.style.padding = '5px 10px';
 
-                    // Settings button with pencil icon
-                    settingsButton.innerText = '✏️';
-                    settingsButton.style.fontSize = '18px'; // Adjust size as needed
-                    settingsButton.style.marginLeft = '10px';
-                    settingsButton.style.backgroundColor = '#ffffff'; // White background to match the YouTLDW button
-                    settingsButton.style.border = '1px solid #cccccc'; // Match border style
-                    settingsButton.style.borderRadius = '4px';
-                    settingsButton.style.cursor = 'pointer';
-                    settingsButton.style.padding = '5px 10px';
+            settingsButton.addEventListener('click', () => {
+                console.log('Settings button clicked');
+                showCustomPromptModal(); // Show the custom prompt modal when clicked
+            });
 
-                    settingsButton.addEventListener('click', () => {
-                        console.log('Settings button clicked');
-                        showCustomPromptModal(); // Ensure the custom prompt modal shows up correctly
-                    });
-
-                    // Insert the buttons to the right of the subscribe button
-                    subscribeButton.parentNode.insertBefore(overlayButton, subscribeButton.nextSibling);
-                    subscribeButton.parentNode.insertBefore(settingsButton, overlayButton.nextSibling);
-                    console.log('Overlay and settings buttons added to the right of the subscribe button');
-                } else {
-                    const notFoundButton = document.createElement('button');
-                    notFoundButton.innerText = 'Not Found';
-                    notFoundButton.style.fontFamily = subscribeButton.style.fontFamily || 'Roboto, Arial, sans-serif';
-                    notFoundButton.style.fontSize = subscribeButton.style.fontSize || '14px';
-                    notFoundButton.style.fontWeight = subscribeButton.style.fontWeight || '500';
-                    notFoundButton.style.padding = '5px 10px';
-                    notFoundButton.style.backgroundColor = '#ff0000'; // Red background to indicate an issue
-                    notFoundButton.style.color = '#ffffff';
-                    notFoundButton.style.border = '1px solid #cccccc';
-                    notFoundButton.style.borderRadius = '4px';
-                    notFoundButton.style.cursor = 'pointer';
-                    notFoundButton.style.marginLeft = '10px';
-
-                    notFoundButton.addEventListener('click', () => {
-                        console.log('Not Found button clicked');
-                        showNotFoundModal();
-                    });
-
-                    // Insert the Not Found button to the right of the subscribe button
-                    subscribeButton.parentNode.insertBefore(notFoundButton, subscribeButton.nextSibling);
-                    console.log('Not Found button added to the right of the subscribe button');
-                }
-            }, 1200); // Adjusted delay to allow for the transcript check
+            // Insert the buttons to the right of the subscribe button
+            subscribeButton.parentNode.insertBefore(overlayButton, subscribeButton.nextSibling);
+            subscribeButton.parentNode.insertBefore(settingsButton, overlayButton.nextSibling);
+            console.log('Overlay and settings buttons added to the right of the subscribe button');
         } else {
             console.error('Subscribe button not found, cannot add overlay button.');
         }
