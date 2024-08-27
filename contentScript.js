@@ -21,6 +21,16 @@ function waitForElement(selector, timeout = 10000) {
     });
 }
 
+// Function to determine if we're on a YouTube Shorts page
+function isYouTubeShorts() {
+    return document.querySelector('#endpoint > tp-yt-paper-item') !== null;
+}
+
+// Function to determine if we're on a YouTube video page (e.g., /watch or /shorts)
+function isYouTubeVideoPage() {
+    return window.location.pathname.includes('/watch') || window.location.pathname.includes('/shorts');
+}
+
 // Function to check if the transcript button is available
 async function isTranscriptAvailable() {
     console.log("Checking if transcript button is available...");
@@ -246,6 +256,18 @@ function showCustomPromptModal() {
 // Function to add the overlay buttons based on transcript availability
 async function addOverlayButtons() {
     try {
+        // First, check if we are on a YouTube Shorts page
+        if (isYouTubeShorts()) {
+            console.log("YouTube Shorts detected. Skipping overlay button injection.");
+            return;
+        }
+
+        // Check if we're on a video page (/watch or /shorts)
+        if (!isYouTubeVideoPage()) {
+            console.log("Not a video page. Skipping overlay button injection.");
+            return;
+        }
+
         const subscribeButton = await waitForElement('#subscribe-button-shape > button');
 
         if (subscribeButton) {
