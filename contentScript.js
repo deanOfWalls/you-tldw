@@ -1,18 +1,23 @@
-// Utility function to wait for an element to appear
-function waitForElement(selector, timeout = 10000) {  // Increased timeout to 10 seconds
+// Utility function to wait for an element to appear using MutationObserver
+function waitForElement(selector, timeout = 10000) {
     return new Promise((resolve, reject) => {
-        const start = Date.now();
-
-        (function check() {
+        const observer = new MutationObserver((mutations, observerInstance) => {
             const element = document.querySelector(selector);
             if (element) {
+                observerInstance.disconnect();
                 resolve(element);
-            } else if (Date.now() - start > timeout) {
-                reject(`Timeout: Element with selector ${selector} not found`);
-            } else {
-                setTimeout(check, 200); // Increased check interval to reduce resource usage
             }
-        })();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+
+        setTimeout(() => {
+            observer.disconnect();
+            reject(`Timeout: Element with selector ${selector} not found`);
+        }, timeout);
     });
 }
 
