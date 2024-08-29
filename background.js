@@ -1,5 +1,5 @@
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.transcript) {
+    if (message.transcript && message.instructions) {
         console.log("Received transcript message:", message);
 
         // Open a new tab to ChatGPT
@@ -13,49 +13,55 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
                     chrome.tabs.onUpdated.removeListener(listener);
 
-                    // Inject the script into the new tab
+                    // Inject the script into the new tab with the passed transcript and instructions
                     chrome.scripting.executeScript({
                         target: { tabId: tab.id },
                         func: (transcriptText, userInstructions) => {
                             console.log("Script injected into ChatGPT tab.");
+                            console.log("Transcript:", transcriptText);
+                            console.log("Instructions:", userInstructions);
 
-                            // Find the input box
-                            const inputBox = document.querySelector('textarea');
-                            if (inputBox) {
-                                console.log("Input box found.");
-                                inputBox.value = `${userInstructions}\n\n${transcriptText}`;
-                                
-                                // Trigger Enter key press to submit
-                                const event = new KeyboardEvent('keydown', {
-                                    key: 'Enter',
-                                    code: 'Enter',
-                                    keyCode: 13,
-                                    which: 13,
-                                    bubbles: true
-                                });
-                                inputBox.dispatchEvent(event);
-                                console.log("Enter key event dispatched.");
+                            // Assign variables to the window object
+                            window.chatgptTranscript = transcriptText;
+                            window.chatgptInstructions = userInstructions;
 
-                                // Wait for 500ms before clicking the submit button
-                                setTimeout(() => {
+                            const retryInterval = 500; // Retry every 500ms
+                            const maxRetries = 10; // Try up to 10 times
+
+                            function tryFindInputBox(retries = 0) {
+                                // Find the input box
+                                const inputBox = document.querySelector('textarea');
+                                if (inputBox) {
+                                    console.log("Input box found.");
+                                    inputBox.value = window.chatgptInstructions + "\n\n" + window.chatgptTranscript;
+                                    inputBox.dispatchEvent(new Event('input', { bubbles: true }));
+
+                                    // Find the submit button and click it
                                     const submitButton = document.querySelector('button[data-testid="send-button"]');
-                                    
                                     if (submitButton) {
                                         submitButton.click();
                                         console.log("Submit button clicked.");
                                     } else {
                                         console.error("Submit button not found.");
                                     }
-                                }, 500); // Adjust the delay time as needed
-
-                            } else {
-                                console.error("Input box not found in ChatGPT.");
+                                } else {
+                                    if (retries < maxRetries) {
+                                        console.log(`Input box not found. Retrying... (${retries + 1}/${maxRetries})`);
+                                        setTimeout(() => tryFindInputBox(retries + 1), retryInterval);
+                                    } else {
+                                        console.error("Input box not found after max retries.");
+                                    }
+                                }
                             }
+
+                            tryFindInputBox();
                         },
                         args: [message.transcript, message.instructions],
                     }).catch(err => console.error("Script injection failed: ", err));
                 }
             });
         });
+    } else {
+        console.error("Received a message without transcript or instructions.");
     }
 });
