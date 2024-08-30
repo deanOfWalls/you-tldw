@@ -10,6 +10,7 @@
     cursor: pointer;
     font-family: Roboto, Arial, sans-serif;
     font-size: 14px;
+    display: inline-block;
 }
 
 /* Style for the TLDW portion of the button */
@@ -26,6 +27,7 @@
     border-radius: 4px;
     cursor: pointer;
     padding: 5px 10px;
+    display: inline-block;
 }
 
 /* Style for the custom prompt modal */

@@ -30,7 +30,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             // Find the input box and insert the text
                             const insertText = async () => {
                                 // Wait for the input box to be present
-                                await new Promise(resolve => setTimeout(resolve, 3000));  // Increased timer to 3 seconds
+                                await new Promise(resolve => setTimeout(resolve, 2000));  // Increased timer to 2 seconds
                                 const inputBox = document.querySelector('textarea');
                                 if (inputBox) {
                                     console.log("Input box found.");
@@ -71,7 +71,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                             await insertText();
                         },
                         args: [message.transcript, message.instructions],
-                    }).catch(err => console.error("Script injection failed: ", err));
+                    }).catch(err => {
+                        if (err.message.includes("Frame with ID")) {
+                            console.warn("Frame was removed before script could be injected. Ignoring this warning.");
+                        } else {
+                            console.error("Script injection failed: ", err);
+                        }
+                    });
                 }
             });
         });
