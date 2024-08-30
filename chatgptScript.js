@@ -1,9 +1,11 @@
 (function() {
     console.log("Script running in ChatGPT tab.");
 
-    // Ensure that these variables are defined before use
-    window.chatgptTranscript = window.chatgptTranscript || '';
-    window.chatgptInstructions = window.chatgptInstructions || '';
+    // Only run the script if the page was opened by the extension
+    if (!window.chatgptInstructions || !window.chatgptTranscript) {
+        console.log("No instructions or transcript found, skipping auto-inject.");
+        return;
+    }
 
     const retryInterval = 500; // Retry every 500ms
     const maxRetries = 10; // Try up to 10 times
