@@ -1,5 +1,5 @@
 // Utility function to wait for an element to appear using MutationObserver
-function waitForElement(selector, timeout = 30000) {
+function waitForElement(selector, timeout = 30000) {  // Increased timeout to 30 seconds
     return new Promise((resolve, reject) => {
         const observer = new MutationObserver((mutations, observerInstance) => {
             const element = document.querySelector(selector);
@@ -140,6 +140,7 @@ function showNotFoundModal() {
     closeButton.style.cursor = 'pointer';
     closeButton.style.fontSize = '16px';
     closeButton.style.color = '#333333';
+    
 
     closeButton.addEventListener('click', () => {
         document.body.removeChild(modal);
@@ -172,16 +173,43 @@ function showCustomPromptModal() {
     modal.style.borderRadius = '8px';
     modal.style.zIndex = '10000';
     modal.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
-    modal.style.width = '300px';
+    modal.style.width = '320px'; // Increased width slightly
+    modal.style.display = 'flex';
+    modal.style.flexDirection = 'column';
+    modal.style.alignItems = 'center';
+
+    // Close button (X)
+    const closeButton = document.createElement('span');
+    closeButton.innerText = '✖';
+    closeButton.style.cursor = 'pointer';
+    closeButton.style.fontSize = '16px';
+    closeButton.style.color = '#333333';
+    closeButton.style.position = 'absolute';
+    closeButton.style.top = '5px';   // Adjusted top position to fit inside modal
+    closeButton.style.right = '5px'; // Adjusted right position to fit inside modal
+    closeButton.style.fontFamily = '"Roboto", "Arial", sans-serif';
+
+    closeButton.addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
 
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'Enter your custom instructions...';
-    input.style.width = '100%';
+    input.style.width = 'calc(100% - 20px)';
     input.style.padding = '10px';
     input.style.marginBottom = '10px';
     input.style.border = '1px solid #cccccc';
     input.style.borderRadius = '4px';
+    input.style.fontFamily = '"Roboto", "Arial", sans-serif';
+    input.autofocus = true; // Set input field to be active by default
+
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            submitButton.click(); // Trigger submit when Enter key is pressed
+        }
+    });
 
     const submitButton = document.createElement('button');
     submitButton.innerText = 'Submit';
@@ -191,6 +219,8 @@ function showCustomPromptModal() {
     submitButton.style.border = 'none';
     submitButton.style.borderRadius = '4px';
     submitButton.style.cursor = 'pointer';
+    submitButton.style.fontFamily = '"Roboto", "Arial", sans-serif';
+    submitButton.style.marginTop = '10px';
 
     submitButton.addEventListener('click', () => {
         const customInstructions = input.value || 'Please summarize this video:';
@@ -198,9 +228,13 @@ function showCustomPromptModal() {
         document.body.removeChild(modal);
     });
 
+    modal.appendChild(closeButton);
     modal.appendChild(input);
     modal.appendChild(submitButton);
     document.body.appendChild(modal);
+
+    // Focus the input field as soon as the modal is displayed
+    input.focus();
 }
 
 // Function to add the overlay buttons in place of the YouTube home button
@@ -231,7 +265,7 @@ async function addOverlayButtons() {
             const parentContainer = document.querySelector(logoSelector);
             if (parentContainer && !document.querySelector('.youtldw-button')) {
                 insertButtons(parentContainer);
-                parentContainer.style.display = 'none';
+                parentContainer.style.display = 'none'; // Hide the YouTube logo again
             }
         });
 
