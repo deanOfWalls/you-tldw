@@ -104,10 +104,34 @@ function getTranscript() {
     const transcriptContainer = document.querySelector('ytd-transcript-renderer');
     if (transcriptContainer) {
         let transcriptText = '';
-        const segments = transcriptContainer.querySelectorAll('ytd-transcript-segment-list-renderer .segment');
+        
+        // Try multiple selectors for transcript segments (YouTube may have changed structure)
+        let segments = transcriptContainer.querySelectorAll('ytd-transcript-segment-list-renderer .segment');
+        
+        // If no segments found with first selector, try alternative selectors
+        if (segments.length === 0) {
+            segments = transcriptContainer.querySelectorAll('.segment');
+        }
+        
+        if (segments.length === 0) {
+            segments = transcriptContainer.querySelectorAll('[class*="segment"]');
+        }
+        
+        if (segments.length === 0) {
+            // Try getting text directly from transcript container
+            const textContent = transcriptContainer.innerText || transcriptContainer.textContent;
+            if (textContent && textContent.trim().length > 0) {
+                return textContent.trim();
+            }
+        }
+        
         segments.forEach(segment => {
-            transcriptText += segment.innerText + ' ';
+            const text = segment.innerText || segment.textContent;
+            if (text) {
+                transcriptText += text + ' ';
+            }
         });
+        
         return transcriptText.trim();
     } else {
         return null;
