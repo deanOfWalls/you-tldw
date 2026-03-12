@@ -26,73 +26,71 @@ function sendTranscriptToBackground(transcript, instructions) {
     chrome.runtime.sendMessage({ transcript, instructions });
 }
 
+// Wait for either new transcript UI (transcript-segment-view-model) or legacy (ytd-transcript-renderer)
+function waitForTranscriptPanel(timeout = 5000) {
+    return new Promise((resolve) => {
+        const check = () => {
+            if (document.querySelector('transcript-segment-view-model') || document.querySelector('ytd-transcript-renderer')) {
+                resolve(true);
+                return true;
+            }
+            return false;
+        };
+        if (check()) return;
+        const observer = new MutationObserver(() => { if (check()) observer.disconnect(); });
+        observer.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => { observer.disconnect(); resolve(false); }, timeout);
+    });
+}
+
 // Function to open the transcript when TL;DW button is clicked
 async function openTranscriptOnDemand(customInstructions = "Summarize in bullet point:") {
     try {
-        // Step 1: Check if the transcript container is already visible
-        let transcriptContainer = document.querySelector('ytd-transcript-renderer');
-        if (transcriptContainer) {
-            const transcript = getTranscript();
+        // Step 1: If transcript panel is already open (new or legacy UI), try to get transcript
+        let transcript = getTranscript();
+        if (transcript) {
+            console.log('Transcript:', transcript);
+            console.log('Instructions:', customInstructions);
+            sendTranscriptToBackground(transcript, customInstructions);
+            return;
+        }
+
+        // Step 2: Try to open transcript via 'Show transcript' button
+        const transcriptButton = document.querySelector('button[aria-label="Show transcript"]');
+        if (transcriptButton) {
+            transcriptButton.click();
+            await waitForTranscriptPanel(5000);
+            transcript = getTranscript();
             if (transcript) {
                 console.log('Transcript:', transcript);
                 console.log('Instructions:', customInstructions);
                 sendTranscriptToBackground(transcript, customInstructions);
-                return; // Exit the function as we've already found and handled the transcript
-            } else {
-                console.error("Transcript could not be scraped.");
-                showNotFoundModal();
                 return;
             }
+            console.error("Transcript could not be scraped after loading.");
+            showNotFoundModal();
+            return;
         }
 
-        // Step 2: If the transcript container isn't visible, check for the 'Show Transcript' button
-        const transcriptButton = document.querySelector('button[aria-label="Show transcript"]');
-        if (transcriptButton) {
-            transcriptButton.click();
-            transcriptContainer = await waitForElement('ytd-transcript-renderer', 5000);
-            if (transcriptContainer) {
-                const transcript = getTranscript();
+        // Step 3: Open via '...More' then 'Show transcript'
+        const moreButton = document.querySelector('#expand');
+        if (moreButton) {
+            moreButton.click();
+            const showTranscriptBtn = await waitForElement('button[aria-label="Show transcript"]', 5000).catch(() => null);
+            if (showTranscriptBtn) {
+                showTranscriptBtn.click();
+                await waitForTranscriptPanel(5000);
+                transcript = getTranscript();
                 if (transcript) {
                     console.log('Transcript:', transcript);
                     console.log('Instructions:', customInstructions);
                     sendTranscriptToBackground(transcript, customInstructions);
-                } else {
-                    console.error("Transcript could not be scraped after loading.");
-                    showNotFoundModal();
+                    return;
                 }
-            } else {
-                showNotFoundModal();
             }
-            return; // Exit the function after handling the transcript
         }
 
-        // Step 3: If the 'Show Transcript' button isn't visible, check for the '...More' button
-        const moreButton = document.querySelector('#expand');
-        if (moreButton) {
-            moreButton.click();
-            const transcriptButton = await waitForElement('button[aria-label="Show transcript"]', 5000);
-            if (transcriptButton) {
-                transcriptButton.click();
-                transcriptContainer = await waitForElement('ytd-transcript-renderer', 5000);
-                if (transcriptContainer) {
-                    const transcript = getTranscript();
-                    if (transcript) {
-                        console.log('Transcript:', transcript);
-                        console.log('Instructions:', customInstructions);
-                        sendTranscriptToBackground(transcript, customInstructions);
-                    } else {
-                        console.error("Transcript could not be scraped after loading.");
-                        showNotFoundModal();
-                    }
-                } else {
-                    showNotFoundModal();
-                }
-            } else {
-                showNotFoundModal();
-            }
-        } else {
-            showNotFoundModal();
-        }
+        showNotFoundModal();
     } catch (error) {
         console.error('Error in openTranscriptOnDemand:', error);
         showNotFoundModal();
@@ -101,41 +99,48 @@ async function openTranscriptOnDemand(customInstructions = "Summarize in bullet 
 
 // Function to get the transcript text
 function getTranscript() {
-    const transcriptContainer = document.querySelector('ytd-transcript-renderer');
-    if (transcriptContainer) {
-        let transcriptText = '';
-        
-        // Try multiple selectors for transcript segments (YouTube may have changed structure)
-        let segments = transcriptContainer.querySelectorAll('ytd-transcript-segment-list-renderer .segment');
-        
-        // If no segments found with first selector, try alternative selectors
-        if (segments.length === 0) {
-            segments = transcriptContainer.querySelectorAll('.segment');
-        }
-        
-        if (segments.length === 0) {
-            segments = transcriptContainer.querySelectorAll('[class*="segment"]');
-        }
-        
-        if (segments.length === 0) {
-            // Try getting text directly from transcript container
-            const textContent = transcriptContainer.innerText || transcriptContainer.textContent;
-            if (textContent && textContent.trim().length > 0) {
-                return textContent.trim();
-            }
-        }
-        
+    let transcriptText = '';
+
+    // New YouTube transcript UI: #contents > ... > transcript-segment-view-model > span
+    let segments = document.querySelectorAll('transcript-segment-view-model');
+    if (segments.length === 0) {
+        segments = document.querySelectorAll('#contents transcript-segment-view-model');
+    }
+
+    if (segments.length > 0) {
         segments.forEach(segment => {
-            const text = segment.innerText || segment.textContent;
-            if (text) {
-                transcriptText += text + ' ';
+            const span = segment.querySelector('span');
+            const text = span ? (span.innerText || span.textContent) : (segment.innerText || segment.textContent);
+            if (text && text.trim()) {
+                transcriptText += text.trim() + ' ';
             }
         });
-        
-        return transcriptText.trim();
-    } else {
-        return null;
+        if (transcriptText.trim()) return transcriptText.trim();
     }
+
+    // Legacy: ytd-transcript-renderer and related selectors
+    const transcriptContainer = document.querySelector('ytd-transcript-renderer');
+    if (transcriptContainer) {
+        let segmentsLegacy = transcriptContainer.querySelectorAll('#segments-container ytd-transcript-segment-renderer');
+        if (segmentsLegacy.length === 0) {
+            segmentsLegacy = transcriptContainer.querySelectorAll('ytd-transcript-segment-renderer');
+        }
+        if (segmentsLegacy.length === 0) {
+            segmentsLegacy = transcriptContainer.querySelectorAll('ytd-transcript-segment-list-renderer .segment, .segment, [class*="segment"]');
+        }
+        if (segmentsLegacy.length === 0) {
+            const textContent = transcriptContainer.innerText || transcriptContainer.textContent;
+            if (textContent && textContent.trim().length > 0) return textContent.trim();
+        }
+        segmentsLegacy.forEach(segment => {
+            const textNode = segment.querySelector('.segment-text') || segment.querySelector('.cue') || segment.querySelector('.cue-group') || segment;
+            const text = textNode ? (textNode.innerText || textNode.textContent) : '';
+            if (text) transcriptText += text + ' ';
+        });
+        if (transcriptText.trim()) return transcriptText.trim();
+    }
+
+    return null;
 }
 
 // Function to show a modal explaining no transcript was found
